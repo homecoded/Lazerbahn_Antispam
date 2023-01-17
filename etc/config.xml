@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../Store/etc/config.xsd">
+    <default>
+        <lazerbahn>
+            <settings>
+                <enabled>false</enabled>
+                <invalid_strings>http://
+https://
+{{
+}}</invalid_strings>
+            </settings>
+        </lazerbahn>
+    </default>
+</config>

@@ -1,0 +1,11 @@
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../lib/internal/Magento/Framework/ObjectManager/etc/config.xsd">
+    <type name="Magento\Customer\Controller\Account\CreatePost">
+        <plugin name="Lazerbahn_Antispam" type="Lazerbahn\Antispam\Plugin\Customer\Controller\Account\CreatePostPlugin" sortOrder="10" disabled="false" />
+    </type>
+    <type name="Magento\Checkout\Api\ShippingInformationManagementInterface">
+        <plugin name="Lazerbahn_Antispam" type="Lazerbahn\Antispam\Plugin\Api\ShippingInformationManagement" sortOrder="1"/>
+    </type>
+    <type name="Magento\Checkout\Api\GuestPaymentInformationManagementInterface">
+        <plugin name="Lazerbahn_Antispam" type="Lazerbahn\Antispam\Plugin\Api\GuestPaymentInformationManagement" sortOrder="1"/>
+    </type>
+</config>

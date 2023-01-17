@@ -1,0 +1,23 @@
+{
+    "name": "lazerbahn/magento2-simple-antispam",
+    "license": "MIT",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "description": "An M2 extension to block spam customer account creation",
+    "require": {
+        "magento/framework": "^101.0|^102.0",
+        "php": ">=7.0.0"
+    },
+    "require-dev":{
+        "phpunit/phpunit":"*",
+        "composer/composer":"*@dev"
+    },
+    "autoload": {
+      "psr-4": {
+        "Lazerbahn\\Antispam\\": ""
+      },
+      "files": [
+            "registration.php"
+        ]
+    }
+}
