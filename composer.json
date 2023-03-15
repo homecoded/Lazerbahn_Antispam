@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "description": "An M2 extension to block spam customer account creation",
     "require": {
-        "magento/framework": "^101.0|^102.0",
+        "magento/framework": "^101.0|^102.0|^103.0|^104.0",
         "php": ">=7.0.0"
     },
     "require-dev":{
