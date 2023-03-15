@@ -2,18 +2,24 @@
 
 namespace Lazerbahn\Antispam\Plugin\Api;
 
+use Lazerbahn\Antispam\Exception\IllegalStringException;
+use Lazerbahn\Antispam\Service\AddressValidator;
 use Magento\Checkout\Api\Data\ShippingInformationInterface;
 use Magento\Checkout\Api\ShippingInformationManagementInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Quote\Api\Data\AddressInterface;
 
 class ShippingInformationManagement
 {
+    /** @var AddressValidator $addressSanitizer */
+    protected $addressSanitizer;
+
     /** @var ScopeConfigInterface $config */
     protected $config;
 
-    public function __construct(
-        ScopeConfigInterface $config
-    ) {
+    public function __construct(AddressValidator $addressSanitizer, ScopeConfigInterface $config)
+    {
+        $this->addressSanitizer = $addressSanitizer;
         $this->config = $config;
     }
 
@@ -21,60 +27,42 @@ class ShippingInformationManagement
         ShippingInformationManagementInterface $subject,
                                                $cartId,
         ShippingInformationInterface           $shippingInformation
-    ) {
+    ): array
+    {
         $return = [$cartId, $shippingInformation];
 
-        $isEnabled = $this->config->getValue('lazerbahn/settings/enable_module');
-        if (!$isEnabled) {
+        if (!$this->config->isSetFlag('lazerbahn/settings/enable_module')) {
             return $return;
         }
 
-        /** @var Magento\Quote\Api\Data\AddressInterface $shippingAddress */
-        $shippingAddress = $shippingInformation->getShippingAddress();
-        $shippingAddress = $this->sanitizeAddress($shippingAddress);
-        $billingAddress = $shippingInformation->getBillingAddress();
-        $billingAddress = $this->sanitizeAddress($billingAddress);
-
-        $shippingInformation->setShippingAddress($shippingAddress);
-        $shippingInformation->setBillingAddress($billingAddress);
+        $shippingInformation->setShippingAddress(
+            $this->sanitizeAddress($shippingInformation->getShippingAddress())
+        );
+        $shippingInformation->setBillingAddress(
+            $this->sanitizeAddress($shippingInformation->getBillingAddress())
+        );
 
         return $return;
     }
 
 
     /**
-     * @param Magento\Quote\Api\Data\AddressInterface $shippingAddress
-     * @return Magento\Quote\Api\Data\AddressInterface
+     * @param AddressInterface $address
+     * @return AddressInterface
      */
-    function sanitizeAddress($shippingAddress)
+    function sanitizeAddress(AddressInterface $address): AddressInterface
     {
-        $data = $shippingAddress->getData();
-        $forbiddenStringsData = $this->config->getValue('lazerbahn/settings/invalid_strings');
-        $forbiddenStrings = explode(PHP_EOL, $forbiddenStringsData);
-
-        $isSpam = false;
-
-        foreach ($forbiddenStrings as $entry) {
-            $entry = trim($entry);
-            if ($isSpam){
-                break;
-            }
-            foreach ($data as $field) {
-                if (strpos($field, $entry) !== false) {
-                    $isSpam = true;
-                    break;
-                }
-            }
-        }
-        if ($isSpam)  {
-            $shippingAddress->setData([
+        try {
+            $this->addressSanitizer->validate($address);
+        } catch (IllegalStringException $exception) {
+            $address->setData([
                 'firstname' => '',
                 'lastname' => '',
                 'company' => '',
                 'city' => ''
             ]);
         }
-        return $shippingAddress;
-    }
 
+        return $address;
+    }
 }
