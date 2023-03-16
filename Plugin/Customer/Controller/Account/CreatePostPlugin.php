@@ -2,58 +2,42 @@
 
 namespace Lazerbahn\Antispam\Plugin\Customer\Controller\Account;
 
+use Lazerbahn\Antispam\Exception\IllegalStringException;
+use Lazerbahn\Antispam\Service\StringArrayValidator;
+use Magento\Customer\Controller\Account\CreatePost;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 
 class CreatePostPlugin
 {
+    /** @var StringArrayValidator $stringArrayValidator */
+    protected $stringArrayValidator;
+
     /** @var ScopeConfigInterface $config */
     protected $config;
 
-    public function __construct(
-        ScopeConfigInterface $config
-    ) {
+    public function __construct(StringArrayValidator $stringArrayValidator, ScopeConfigInterface $config)
+    {
+        $this->stringArrayValidator = $stringArrayValidator;
         $this->config = $config;
     }
 
-    public function aroundExecute(\Magento\Customer\Controller\Account\CreatePost $subject, callable $proceed)
+    public function aroundExecute(CreatePost $subject, callable $proceed)
     {
-        $isEnabled = $this->config->getValue('lazerbahn/settings/enable_module');
-        if (!$isEnabled) {
+        if (!$this->config->getValue('lazerbahn/settings/enable_module')) {
             return $proceed();
         }
 
-        $postData = \Magento\Framework\App\ObjectManager::getInstance()
-            ->get('Magento\Framework\App\RequestInterface')
-            ->getPost();
+        $postData = [
+            $subject->getRequest()->getPost('firstname'),
+            $subject->getRequest()->getPost('lastname')
+        ];
 
-        $forbiddenStringsData = $this->config->getValue('lazerbahn/settings/invalid_strings');
-        $forbiddenStrings = explode(PHP_EOL, $forbiddenStringsData);
-
-        if (!$forbiddenStrings) {
-            return $proceed();
+        try {
+            $this->stringArrayValidator->validate($postData);
+        } catch (IllegalStringException $exception) {
+            return;
         }
 
-        $formFieldsToCheck = array(
-            'firstname',
-            'lastname'
-        );
-
-        $isSpam = false;
-
-        foreach ($forbiddenStrings as $entry) {
-            $entry = trim($entry);
-            foreach ($formFieldsToCheck as $field) {
-                if (strpos($postData[$field], $entry) !== false) {
-                    $isSpam = true;
-                    break;
-                }
-            }
-            if ($isSpam) break;
-        }
-
-        if (!$isSpam) {
-            return $proceed();
-        }
+        return $proceed();
     }
-
 }

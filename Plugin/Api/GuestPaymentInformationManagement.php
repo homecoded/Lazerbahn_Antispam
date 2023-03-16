@@ -2,69 +2,49 @@
 
 namespace Lazerbahn\Antispam\Plugin\Api;
 
-use Magento\Checkout\Api\ShippingInformationManagementInterface;
+use Lazerbahn\Antispam\Exception\IllegalStringException;
+use Lazerbahn\Antispam\Service\AddressValidator;
+use Magento\Checkout\Api\GuestPaymentInformationManagementInterface;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Quote\Api\Data\AddressInterface;
+use Magento\Quote\Api\Data\PaymentInterface;
 use Magento\Setup\Exception;
 
 class GuestPaymentInformationManagement
 {
+    /** @var AddressValidator $addressSanitizer */
+    protected $addressSanitizer;
+
     /** @var ScopeConfigInterface $config */
     protected $config;
 
-    public function __construct(
-        ScopeConfigInterface $config
-    ) {
+    public function __construct(AddressValidator $addressSanitizer, ScopeConfigInterface $config)
+    {
+        $this->addressSanitizer = $addressSanitizer;
         $this->config = $config;
     }
 
+    /** @throws Exception */
     public function beforeSavePaymentInformation(
-        \Magento\Checkout\Api\GuestPaymentInformationManagementInterface $subject,
-                                                                         $cartId,
-                                                                         $email,
-        \Magento\Quote\Api\Data\PaymentInterface $paymentMethod,
-        \Magento\Quote\Api\Data\AddressInterface $billingAddress = null
-    ) {
+        GuestPaymentInformationManagementInterface $subject,
+                                                   $cartId,
+                                                   $email,
+        PaymentInterface                           $paymentMethod,
+        AddressInterface                           $billingAddress = null
+    ): array
+    {
         $return = [$cartId, $email, $paymentMethod, $billingAddress];
 
-        $isEnabled = $this->config->getValue('lazerbahn/settings/enable_module');
-        if (!$isEnabled) {
+        if (is_null($billingAddress) || !$this->config->isSetFlag('lazerbahn/settings/enable_module')) {
             return $return;
         }
 
-        /** @var Magento\Quote\Api\Data\AddressInterface $billingAddress */
-        $this->sanitizeAddress($billingAddress);
-        return $return;
-    }
-
-
-    /**
-     * @param Magento\Quote\Api\Data\AddressInterface $address
-     * @return Magento\Quote\Api\Data\AddressInterface
-     */
-    function sanitizeAddress($address)
-    {
-        $data = $address->getData();
-        $forbiddenStringsData = $this->config->getValue('lazerbahn/settings/invalid_strings');
-        $forbiddenStrings = explode(PHP_EOL, $forbiddenStringsData);
-
-        $isSpam = false;
-
-        foreach ($forbiddenStrings as $entry) {
-            $entry = trim($entry);
-            if ($isSpam){
-                break;
-            }
-            foreach ($data as $field) {
-                if (strpos($field, $entry) !== false) {
-                    $isSpam = true;
-                    break;
-                }
-            }
-        }
-        if ($isSpam)  {
+        try {
+            $this->addressSanitizer->validate($billingAddress);
+        } catch (IllegalStringException $exception) {
             throw new Exception('Billing address is not set.');
         }
-        return $address;
-    }
 
+        return $return;
+    }
 }
