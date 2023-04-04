@@ -25,6 +25,9 @@ class StringArrayValidator
             $entry = trim($entry);
 
             foreach ($stringArray as $field) {
+                if (empty($field) || empty($entry) {
+                    continue;
+                }
                 if (strpos($field, $entry) !== false) {
                     throw new IllegalStringException('Found illegal string');
                 }
